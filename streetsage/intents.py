@@ -1,6 +1,6 @@
 """
 Intent handler for voice Q&A.
-Uses Gemini for natural language understanding, with keyword matching as fallback.
+Uses Claude for natural language understanding, with keyword matching as fallback.
 """
 
 import re
@@ -8,7 +8,7 @@ from typing import Optional, Dict
 import logging
 
 from config import DISTANCE_PHRASES, ACTION_VERBS
-from gemini_ai import get_gemini_assistant
+from claude_ai import get_claude_assistant
 
 logger = logging.getLogger(__name__)
 
@@ -82,24 +82,24 @@ class IntentParser:
 
 
 class IntentHandler:
-    """Handle intents using scene memory and Gemini AI."""
+    """Handle intents using scene memory and Claude AI."""
 
-    def __init__(self, scene_memory, use_gemini: bool = True):
+    def __init__(self, scene_memory, use_claude: bool = True):
         """
         Initialize handler.
 
         Args:
             scene_memory: SceneMemory instance
-            use_gemini: Whether to use Gemini for Q&A (default: True)
+            use_claude: Whether to use Claude for Q&A (default: True)
         """
         self.memory = scene_memory
         self.parser = IntentParser()
-        self.use_gemini = use_gemini
-        self.gemini = get_gemini_assistant() if use_gemini else None
+        self.use_claude = use_claude
+        self.claude = get_claude_assistant() if use_claude else None
 
     def handle(self, text: str, current_frame=None, ocr_reader=None) -> str:
         """
-        Handle a voice command using Gemini or fallback to keyword matching.
+        Handle a voice command using Claude or fallback to keyword matching.
 
         Args:
             text: User's spoken text
@@ -116,11 +116,11 @@ class IntentHandler:
         elif intent == "repeat":
             return self._handle_repeat()
 
-        # Use Gemini if available and enabled
-        if self.use_gemini and self.gemini and self.gemini.enabled:
-            logger.info(f"Using Gemini to answer: {text}")
+        # Use Claude if available and enabled
+        if self.use_claude and self.claude and self.claude.enabled:
+            logger.info(f"Using Claude to answer: {text}")
             recent = self.memory.get_most_recent()
-            return self.gemini.answer_question(text, recent)
+            return self.claude.answer_question(text, recent)
 
         # Fallback to keyword-based intent matching
         logger.info(f"Using keyword matching for: {text}")

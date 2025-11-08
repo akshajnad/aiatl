@@ -15,8 +15,11 @@ load_dotenv(dotenv_path=env_path)
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "EXAVITQu4vr4xnSDxMaL")
 
-# Google Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCSP0hOyo1nl4F3Zs7yQEVLNaPer-WjR2A")
+# Anthropic Claude (for Q&A)
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+
+# Google Gemini (deprecated - use Claude instead)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Video Source
 VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "0")

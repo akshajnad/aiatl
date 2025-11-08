@@ -220,16 +220,16 @@ class StreetSageApp:
 
         # 6. Generate instruction
         instruction = ""
-        if top_hazard is not None:
-            ttc = top_hazard.get("ttc") if hazard_type == "dynamic" else None
+        ttc = top_hazard.get("ttc") if (top_hazard and hazard_type == "dynamic") else None
 
-            if self.rate_limiter.can_speak(timestamp, ttc):
-                instruction = self.rule_engine.generate_instruction(top_hazard, hazard_type)
+        # Check if we should alert about this hazard
+        if self.rate_limiter.should_alert(timestamp, top_hazard, hazard_type or "none", ttc):
+            instruction = self.rule_engine.generate_instruction(top_hazard, hazard_type)
 
-                if instruction:
-                    logger.info(f"Instruction: {instruction}")
-                    self.tts.speak_async(instruction)
-                    self.rate_limiter.mark_spoken(timestamp)
+            if instruction:
+                logger.info(f"Instruction: {instruction}")
+                self.tts.speak_async(instruction)
+                self.rate_limiter.mark_spoken(timestamp, top_hazard, hazard_type)
 
         # 7. Update scene memory
         scene_data = {
