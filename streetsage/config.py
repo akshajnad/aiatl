@@ -15,13 +15,8 @@ load_dotenv(dotenv_path=env_path)
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "EXAVITQu4vr4xnSDxMaL")
 
-# Snowflake
-SNOWFLAKE_USER = os.getenv("SNOWFLAKE_USER", "")
-SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD", "")
-SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT", "")
-SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH")
-SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE", "STREETSAGE")
-SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC")
+# Google Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCSP0hOyo1nl4F3Zs7yQEVLNaPer-WjR2A")
 
 # Video Source
 VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "0")
@@ -39,10 +34,6 @@ INSTRUCTION_CADENCE_SEC = float(os.getenv("INSTRUCTION_CADENCE_SEC", "3.0"))
 # Audio Settings
 ENABLE_TTS = os.getenv("ENABLE_TTS", "true").lower() == "true"
 ENABLE_STT = os.getenv("ENABLE_STT", "true").lower() == "true"
-
-# Logging
-LOG_TO_SNOWFLAKE = os.getenv("LOG_TO_SNOWFLAKE", "true").lower() == "true"
-SESSION_ID = os.getenv("SESSION_ID", "local_dev")
 
 # Detection Classes
 # COCO classes we care about for navigation

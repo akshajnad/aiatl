@@ -25,7 +25,6 @@ from ocr_read import OCRReader
 from audio_tts import TTSEngine
 from audio_stt import STTEngine
 from intents import IntentHandler
-from snowflake_io import get_snowflake_logger
 import config
 
 # Setup logging
@@ -74,9 +73,6 @@ class StreetSageApp:
         self.tts = TTSEngine()
         self.stt = STTEngine(model_size="base") if enable_voice_qa else None
         self.intent_handler = IntentHandler(self.memory) if enable_voice_qa else None
-
-        logger.info("Connecting to Snowflake...")
-        self.snowflake = get_snowflake_logger()
 
         # State
         self.camera = None
@@ -218,33 +214,6 @@ class StreetSageApp:
         }
         self.memory.add_frame(timestamp, scene_data)
 
-        # 8. Log to Snowflake
-        if instruction and top_hazard:
-            self._log_to_snowflake(top_hazard, hazard_type, instruction)
-
-    def _log_to_snowflake(self, hazard: dict, hazard_type: str, instruction: str):
-        """Log hazard event to Snowflake."""
-        if hazard_type == "dynamic":
-            self.snowflake.log_event(
-                object_class=hazard.get("class_name", "unknown"),
-                side=hazard.get("side", "center"),
-                distance_bucket=hazard.get("distance_bucket", "unknown"),
-                ttc_sec=hazard.get("ttc"),
-                confidence=hazard.get("confidence"),
-                instruction=instruction,
-                source="cv"
-            )
-        elif hazard_type == "ground":
-            self.snowflake.log_event(
-                object_class=hazard.get("hazard_type", "obstacle"),
-                side="center",
-                distance_bucket="near",
-                ttc_sec=None,
-                confidence=hazard.get("score"),
-                instruction=instruction,
-                source="cv"
-            )
-
     def _handle_voice_command(self, text: str):
         """
         Handle voice command from STT.
@@ -278,9 +247,6 @@ class StreetSageApp:
                 response = f"It says: {text}"
                 logger.info(response)
                 self.tts.speak(response)
-
-                # Log to Snowflake
-                self.snowflake.log_ocr_text(text, side="center", distance_bucket="unknown")
             else:
                 self.tts.speak("I couldn't read any text.")
 
@@ -298,8 +264,6 @@ class StreetSageApp:
 
         if self.enable_viz:
             cv2.destroyAllWindows()
-
-        self.snowflake.close()
 
         logger.info("Shutdown complete")
 
@@ -323,24 +287,8 @@ def main():
         action="store_true",
         help="Enable voice Q&A (requires microphone)"
     )
-    parser.add_argument(
-        "--init-db",
-        action="store_true",
-        help="Initialize Snowflake database schema and exit"
-    )
 
     args = parser.parse_args()
-
-    # Handle DB init
-    if args.init_db:
-        logger.info("Initializing Snowflake database...")
-        sf = get_snowflake_logger()
-        if sf.enabled:
-            sf.init_db()
-            logger.info("Database initialized successfully")
-        else:
-            logger.error("Snowflake not configured. Check .env file.")
-        return
 
     # Convert source to int if it's a number
     source = args.source
