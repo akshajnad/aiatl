@@ -154,16 +154,18 @@ class SceneMemory:
 class InstructionRateLimiter:
     """Rate limiter for spoken instructions."""
 
-    def __init__(self, min_interval_sec: float = 3.0, emergency_threshold_ttc: float = 1.5):
+    def __init__(self, min_interval_sec: float = 3.0, emergency_threshold_ttc: float = 1.5, emergency_min_interval_sec: float = 0.5):
         """
         Initialize rate limiter.
 
         Args:
             min_interval_sec: Minimum time between instructions
             emergency_threshold_ttc: TTC threshold for emergency override
+            emergency_min_interval_sec: Minimum time between emergency instructions (prevents every-frame alerts)
         """
         self.min_interval_sec = min_interval_sec
         self.emergency_threshold_ttc = emergency_threshold_ttc
+        self.emergency_min_interval_sec = emergency_min_interval_sec
         self.last_instruction_time = 0.0
 
     def can_speak(self, current_time: float, ttc: Optional[float] = None) -> bool:
@@ -179,9 +181,9 @@ class InstructionRateLimiter:
         """
         elapsed = current_time - self.last_instruction_time
 
-        # Emergency override
+        # Emergency override - use shorter interval but still throttle
         if ttc is not None and ttc < self.emergency_threshold_ttc:
-            return True
+            return elapsed >= self.emergency_min_interval_sec
 
         # Normal rate limiting
         return elapsed >= self.min_interval_sec

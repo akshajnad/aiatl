@@ -67,7 +67,11 @@ class StreetSageApp:
         self.tracker = ObjectTracker()
         self.rule_engine = RuleEngine()
         self.memory = SceneMemory()
-        self.rate_limiter = InstructionRateLimiter()
+        self.rate_limiter = InstructionRateLimiter(
+            min_interval_sec=config.INSTRUCTION_CADENCE_SEC,
+            emergency_threshold_ttc=config.TTC_EMERGENCY_THRESHOLD,
+            emergency_min_interval_sec=config.EMERGENCY_INSTRUCTION_CADENCE_SEC
+        )
 
         logger.info("Initializing audio I/O...")
         self.tts = TTSEngine()
