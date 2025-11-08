@@ -56,6 +56,12 @@ class GroundHazardDetector:
         if h == 0 or w == 0:
             return 0.0, np.zeros((1, 1), dtype=np.uint8)
 
+        # Check if frame is mostly dark (invalid/black frame)
+        mean_brightness = np.mean(ground_roi)
+        if mean_brightness < 10:
+            logger.debug(f"Skipping puddle detection on dark frame (brightness: {mean_brightness:.1f})")
+            return 0.0, np.zeros(ground_roi.shape[:2], dtype=np.uint8)
+
         # Convert to HSV
         hsv = cv2.cvtColor(ground_roi, cv2.COLOR_BGR2HSV)
 
@@ -65,6 +71,11 @@ class GroundHazardDetector:
 
         # Calculate ratio of specular pixels
         specular_ratio = np.count_nonzero(mask) / (h * w)
+
+        # Only trigger if we have a reasonable amount of specular pixels
+        # Avoid false positives from a few bright pixels in dark frames
+        if specular_ratio < PUDDLE_THRESHOLD:
+            return 0.0, mask
 
         # Score: clamp(1.8 * ratio)
         puddle_score = min(1.0, 1.8 * specular_ratio)

@@ -92,6 +92,15 @@ class StreetSageApp:
         self.camera = CameraStream(self.video_source)
         if not self.camera.open():
             logger.error("Failed to open camera")
+            self.tts.speak("Failed to open camera. Please check your camera connection.")
+            logger.error("\n" + "="*60)
+            logger.error("CAMERA TROUBLESHOOTING")
+            logger.error("="*60)
+            logger.error("1. Run 'python test_camera.py' to diagnose camera issues")
+            logger.error("2. Try specifying a different camera: python app.py --source 1 --viz")
+            logger.error("3. Check if another application is using the camera")
+            logger.error("4. For Iriun/DroidCam, ensure the app is running and connected")
+            logger.error("="*60 + "\n")
             return
 
         frame_width, frame_height = self.camera.get_resolution()
@@ -109,6 +118,8 @@ class StreetSageApp:
     def _main_loop(self):
         """Main processing loop."""
         last_frame_time = 0.0
+        consecutive_failures = 0
+        max_consecutive_failures = 30  # Exit after 30 failed reads
 
         try:
             while self.running:
@@ -124,9 +135,20 @@ class StreetSageApp:
                 # Read frame
                 ret, frame = self.camera.read()
                 if not ret or frame is None:
-                    logger.warning("Failed to read frame")
+                    consecutive_failures += 1
+                    logger.warning(f"Failed to read frame ({consecutive_failures}/{max_consecutive_failures})")
+
+                    if consecutive_failures >= max_consecutive_failures:
+                        logger.error("Too many consecutive frame read failures. Camera may be disconnected.")
+                        self.tts.speak("Camera connection lost. Exiting.")
+                        self.running = False
+                        break
+
+                    time.sleep(0.1)
                     continue
 
+                # Reset failure counter on successful read
+                consecutive_failures = 0
                 self.current_frame = frame
 
                 # Process frame
