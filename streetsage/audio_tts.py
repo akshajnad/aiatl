@@ -30,6 +30,8 @@ class TTSEngine:
         self.api_key = api_key or ELEVENLABS_API_KEY
         self.voice_id = voice_id or ELEVENLABS_VOICE_ID
         self.enabled = enabled and bool(self.api_key)
+        self.current_thread = None  # Track current speaking thread
+        self.stop_speaking = False  # Flag to cancel current speech
 
         if not self.enabled:
             logger.warning("TTS is disabled (no API key or explicitly disabled)")
@@ -125,12 +127,23 @@ class TTSEngine:
     def speak_async(self, text: str):
         """
         Speak text asynchronously (fire and forget).
+        Cancels any previous speech before starting new one.
 
         Args:
             text: Text to speak
         """
         import threading
-        threading.Thread(target=self.speak, args=(text, True), daemon=True).start()
+
+        # Cancel previous speech if still running
+        if self.current_thread is not None and self.current_thread.is_alive():
+            logger.debug("Canceling previous speech")
+            self.stop_speaking = True
+            # Don't wait for it to finish, just start the new one
+
+        # Reset stop flag and start new speech
+        self.stop_speaking = False
+        self.current_thread = threading.Thread(target=self.speak, args=(text, True), daemon=True)
+        self.current_thread.start()
 
 
 def test_tts():

@@ -30,6 +30,7 @@ except ValueError:
 FRAME_RATE = float(os.getenv("FRAME_RATE", "3"))
 DETECTION_CONFIDENCE = float(os.getenv("DETECTION_CONFIDENCE", "0.35"))
 INSTRUCTION_CADENCE_SEC = float(os.getenv("INSTRUCTION_CADENCE_SEC", "3.0"))
+EMERGENCY_INSTRUCTION_CADENCE_SEC = float(os.getenv("EMERGENCY_INSTRUCTION_CADENCE_SEC", "0.5"))
 
 # Audio Settings
 ENABLE_TTS = os.getenv("ENABLE_TTS", "true").lower() == "true"
