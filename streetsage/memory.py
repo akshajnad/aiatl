@@ -152,7 +152,7 @@ class SceneMemory:
 
 
 class InstructionRateLimiter:
-    """Rate limiter for spoken instructions."""
+    """Rate limiter for spoken instructions with object-based deduplication."""
 
     def __init__(self, min_interval_sec: float = 3.0, emergency_threshold_ttc: float = 1.5, emergency_min_interval_sec: float = 0.5):
         """
@@ -167,18 +167,36 @@ class InstructionRateLimiter:
         self.emergency_threshold_ttc = emergency_threshold_ttc
         self.emergency_min_interval_sec = emergency_min_interval_sec
         self.last_instruction_time = 0.0
+        self.last_alerted_hazard = None  # Track what we last alerted about
+        self.last_hazard_type = None  # Track whether it was dynamic or ground
 
-    def can_speak(self, current_time: float, ttc: Optional[float] = None) -> bool:
+    def should_alert(self, current_time: float, hazard: Optional[Dict], hazard_type: str, ttc: Optional[float] = None) -> bool:
         """
-        Check if we can speak a new instruction.
+        Check if we should speak about this hazard.
 
         Args:
             current_time: Current timestamp
+            hazard: The hazard dict (object or ground hazard)
+            hazard_type: "dynamic" or "ground"
             ttc: Optional TTC for emergency override
 
         Returns:
-            True if allowed to speak
+            True if we should alert about this hazard
         """
+        if hazard is None:
+            # No hazard - reset tracking
+            if self.last_alerted_hazard is not None:
+                logger.debug("No hazard detected, resetting alert tracking")
+                self.last_alerted_hazard = None
+                self.last_hazard_type = None
+            return False
+
+        # Check if this is the same hazard we already alerted about
+        if self._is_same_hazard(hazard, hazard_type):
+            logger.debug("Same hazard as before, suppressing repeated alert")
+            return False
+
+        # Different hazard - check time-based rate limiting
         elapsed = current_time - self.last_instruction_time
 
         # Emergency override - use shorter interval but still throttle
@@ -188,13 +206,50 @@ class InstructionRateLimiter:
         # Normal rate limiting
         return elapsed >= self.min_interval_sec
 
-    def mark_spoken(self, current_time: float):
-        """Mark that an instruction was spoken."""
+    def _is_same_hazard(self, hazard: Dict, hazard_type: str) -> bool:
+        """
+        Check if this is the same hazard we alerted about before.
+
+        Args:
+            hazard: Current hazard dict
+            hazard_type: "dynamic" or "ground"
+
+        Returns:
+            True if same hazard
+        """
+        if self.last_alerted_hazard is None or self.last_hazard_type != hazard_type:
+            return False
+
+        if hazard_type == "dynamic":
+            # For dynamic objects, compare class name and approximate position
+            return (
+                hazard.get("class_name") == self.last_alerted_hazard.get("class_name") and
+                hazard.get("side") == self.last_alerted_hazard.get("side") and
+                hazard.get("distance_bucket") == self.last_alerted_hazard.get("distance_bucket")
+            )
+        else:
+            # For ground hazards, just check if we've already alerted (ground hazards don't move)
+            return True
+
+    def mark_spoken(self, current_time: float, hazard: Optional[Dict] = None, hazard_type: Optional[str] = None):
+        """
+        Mark that an instruction was spoken.
+
+        Args:
+            current_time: Current timestamp
+            hazard: The hazard we alerted about
+            hazard_type: "dynamic" or "ground"
+        """
         self.last_instruction_time = current_time
+        self.last_alerted_hazard = hazard
+        self.last_hazard_type = hazard_type
+        logger.debug(f"Marked alert for {hazard_type} hazard: {hazard.get('class_name') if hazard else 'none'}")
 
     def reset(self):
         """Reset the limiter."""
         self.last_instruction_time = 0.0
+        self.last_alerted_hazard = None
+        self.last_hazard_type = None
 
 
 if __name__ == "__main__":
