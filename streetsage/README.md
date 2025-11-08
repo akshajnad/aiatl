@@ -7,7 +7,7 @@ StreetSage provides real-time navigation assistance using:
 - Phone/laptop camera as video source
 - ElevenLabs text-to-speech for audio guidance
 - Local Whisper speech-to-text for voice Q&A
-- Snowflake for event logging and analytics
+- Google Gemini for intelligent natural language understanding
 
 ⚠️ **DISCLAIMER**: This is an assistive aid, not a medical device. Always use additional navigation tools and your own judgment.
 
@@ -30,11 +30,13 @@ StreetSage provides real-time navigation assistance using:
 ### Audio Interface
 - **Spoken Instructions**: Concise, actionable guidance (e.g., "Bicycle approaching from your left, about four meters. Pause.")
 - **Rate Limiting**: Maximum one instruction every 3 seconds (unless emergency)
-- **Voice Q&A**: Ask "how far?", "where?", "what do I do?", "read that sign"
+- **Voice Q&A**: Natural language questions powered by Google Gemini (e.g., "how far?", "where?", "what do I do?", "read that sign")
+- **Intelligent Responses**: Gemini provides context-aware answers based on current scene understanding
 
-### Data & Analytics
-- **Snowflake Logging**: Event summaries for post-hoc analysis
-- **Privacy-First**: No raw video leaves the device
+### Privacy-First Design
+- **Local Processing**: All vision processing happens on device
+- **No Video Storage**: No raw video is recorded or transmitted
+- **Minimal External APIs**: Only text-to-speech (ElevenLabs) and AI Q&A (Gemini) use external services
 
 ---
 
@@ -94,17 +96,10 @@ nano .env  # or your favorite editor
 
 Required credentials:
 - **ELEVENLABS_API_KEY**: Get from https://elevenlabs.io
-- **SNOWFLAKE_***: Your Snowflake connection details
+- **GEMINI_API_KEY**: Get from https://aistudio.google.com/app/apikey
 - **VIDEO_SOURCE**: Camera source (0 for laptop webcam)
 
-### 4. Initialize Database
-
-```bash
-# Create Snowflake tables and views
-python app.py --init-db
-```
-
-### 5. Run the App
+### 4. Run the App
 
 ```bash
 # Basic mode (laptop webcam, audio output only)
@@ -259,20 +254,9 @@ Tests verify:
 **Expected Results**:
 1. ✓ Hear dynamic warning with side + distance + action
 2. ✓ Hear ground warning (puddle/uneven)
-3. ✓ Ask "how far is it?" → get distance answer
-4. ✓ Say "read the sign" → hear first line from text
-5. ✓ Confirm event row in Snowflake with instruction
-
-```sql
--- Check recent events
-SELECT * FROM events
-ORDER BY ts DESC
-LIMIT 10;
-
--- View top hazards
-SELECT * FROM top_hazards
-ORDER BY risk_score DESC;
-```
+3. ✓ Ask "how far is it?" → get intelligent Gemini-powered answer
+4. ✓ Say "read the sign" → hear OCR text read aloud
+5. ✓ Try various natural language questions (e.g., "what's the biggest danger?", "should I wait?")
 
 ---
 
@@ -316,19 +300,12 @@ ORDER BY risk_score DESC;
 │  "Bicycle approaching from your left,   │
 │   about four meters. Pause."            │
 └─────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│  SNOWFLAKE (Event Logging)              │
-│  • Numeric features only                │
-│  • Analytics views                      │
-│  • Post-hoc tuning data                 │
-└─────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────┐
 │  VOICE Q&A (Optional)                   │
-│  Whisper STT → Intent Parser            │
-│           → Answer from Memory          │
+│  Whisper STT → Gemini AI                │
+│           → Natural Language Answer     │
+│           (with scene context)          │
 └─────────────────────────────────────────┘
 ```
 
@@ -374,15 +351,12 @@ streetsage/
 ├── ocr_read.py               # OCR on demand
 ├── audio_tts.py              # ElevenLabs TTS
 ├── audio_stt.py              # Whisper STT
-├── intents.py                # Voice Q&A intent parsing
-├── snowflake_io.py           # Snowflake connection + logging
+├── intents.py                # Voice Q&A intent handling
+├── gemini_ai.py              # Gemini AI integration
 ├── config.py                 # Configuration
 ├── requirements.txt          # Dependencies
 ├── .env.example              # Environment template
 ├── README.md                 # This file
-├── sql/
-│   ├── create_tables.sql     # Schema
-│   └── create_views.sql      # Analytics views
 └── scripts/
     ├── run_local.sh          # Convenience launcher
     └── test_pipeline.py      # Smoke tests
@@ -438,48 +412,26 @@ risk_ground = 0.4*puddle + 0.4*uneven + 0.3*cone
 
 ---
 
-## Snowflake Schema
+## Gemini Integration
 
-### Events Table
-```sql
-CREATE TABLE events (
-  event_id STRING,
-  ts TIMESTAMP_TZ,
-  session_id STRING,
-  object_class STRING,       -- 'person','bicycle','puddle',etc.
-  side STRING,               -- 'left','center','right'
-  distance_bucket STRING,    -- 'very_near','near','mid','far'
-  ttc_sec FLOAT,             -- Time to collision (NULL if static)
-  confidence FLOAT,
-  instruction STRING,        -- Spoken text
-  source STRING              -- 'cv','ocr','rule'
-);
-```
+StreetSage uses Google Gemini 1.5 Flash for intelligent, context-aware voice Q&A:
 
-### OCR Text Table
-```sql
-CREATE TABLE ocr_text (
-  event_id STRING,
-  ts TIMESTAMP_TZ,
-  snippet STRING,
-  side STRING,
-  distance_bucket STRING
-);
-```
+### Features
+- **Natural Language Understanding**: Ask questions in plain English without specific keywords
+- **Scene Context**: Gemini receives current object detections, distances, and hazards
+- **Concise Responses**: Optimized for audio output (1-2 sentences)
+- **Fallback Support**: Keyword-based intent matching if Gemini is unavailable
 
-### Top Hazards View
-```sql
-CREATE VIEW top_hazards AS
-SELECT
-  DATE_TRUNC('second', ts) AS bucket_ts,
-  object_class, side, distance_bucket,
-  MAX(risk_score) AS risk_score,
-  ANY_VALUE(instruction) AS example_instruction
-FROM events
-WHERE ts > DATEADD('minute', -2, CURRENT_TIMESTAMP())
-GROUP BY 1,2,3,4
-ORDER BY risk_score DESC;
-```
+### Example Interactions
+
+**User**: "How close is that person?"
+**Gemini**: "The person is about two meters away on your left."
+
+**User**: "What should I watch out for?"
+**Gemini**: "There's a bicycle approaching from your right at mid-range and a puddle detected ahead."
+
+**User**: "Is it safe to cross?"
+**Gemini**: "Wait - there's a car approaching from your left, very near, about one meter away."
 
 ---
 
@@ -509,13 +461,13 @@ python audio_stt.py
 python -c "import sounddevice as sd; print(sd.query_devices())"
 ```
 
-### Snowflake Connection
+### Gemini API Issues
 ```bash
-# Test connection
-python snowflake_io.py
+# Test Gemini connection
+python gemini_ai.py
 
-# Check credentials in .env
-cat .env | grep SNOWFLAKE
+# Check API key in .env
+cat .env | grep GEMINI
 ```
 
 ### Model Download
@@ -557,21 +509,20 @@ stt = STTEngine("small")  # small instead of base
 ### Data Minimization
 - **No raw video** leaves the device
 - **No video recording** to disk
-- **Only numeric features** sent to Snowflake:
-  - Object class, side, distance bucket
-  - TTC, confidence scores
-  - Spoken instruction text
-  - OCR text snippets (on demand only)
+- **Only text data** sent to external APIs:
+  - Scene descriptions to Gemini (object class, side, distance only)
+  - Voice transcriptions for Q&A
+  - Text for speech synthesis
 
 ### Network Traffic
 - **ElevenLabs**: Text → audio (HTTPS)
-- **Snowflake**: Event rows (encrypted connection)
+- **Google Gemini**: Scene context + questions → answers (HTTPS)
 - **No external APIs** for vision (fully local)
 
 ### Recommendations
-- Use strong Snowflake credentials
+- Keep API keys secure
 - Rotate API keys regularly
-- Review Snowflake access logs
+- Review API usage on Google AI Studio and ElevenLabs dashboards
 - Consider VPN for network streams
 
 ---
@@ -579,12 +530,11 @@ stt = STTEngine("small")  # small instead of base
 ## Future Enhancements
 
 ### Planned (Post-MVP)
-- [ ] **Vultr Cloud Relay**: Multi-device event aggregation
-- [ ] **Live Dashboard**: Web view of recent hazards
 - [ ] **GPS Integration**: Location-aware warnings
 - [ ] **Obstacle Depth Fusion**: Combine detection + depth for better distance
 - [ ] **Custom Voice Training**: Personalized TTS voices
-- [ ] **Offline Mode**: Queue events when network unavailable
+- [ ] **Offline Mode**: Fallback to keyword-based Q&A when network unavailable
+- [ ] **Vision API Integration**: Enhanced scene understanding with Gemini Vision
 
 ### Advanced Features
 - [ ] **Semantic Segmentation**: Better ground/obstacle distinction
@@ -620,7 +570,7 @@ MIT License - See LICENSE file
 - **Intel ISL** for MiDaS
 - **ElevenLabs** for TTS API
 - **Guillermo Cámbara** for faster-whisper
-- **Snowflake** for analytics platform
+- **Google** for Gemini AI
 
 ---
 
