@@ -125,38 +125,95 @@ python app.py --source rtsp://192.168.1.100:8080/h264_ulaw.sdp
 
 ---
 
-## Phone Camera Setup
+## Camera Setup
 
-### Option 1: Wi-Fi Streaming (Recommended)
+### Option 1: Laptop Webcam (Simplest)
 
-#### Android
-1. Install **IP Webcam** app from Play Store
-2. Open app → Start Server
-3. Note the IP address (e.g., `http://192.168.1.100:8080`)
-4. Use URL in StreetSage:
-   - RTSP: `rtsp://192.168.1.100:8080/h264_ulaw.sdp`
-   - MJPEG: `http://192.168.1.100:8080/video`
+Just use your laptop's built-in camera - no phone needed!
 
-#### iOS
-1. Install **Iriun Webcam** or **NDI HX Camera** from App Store
-2. Follow app instructions to get streaming URL
-3. Use URL in StreetSage
+```bash
+# Uses default webcam (index 0)
+python app.py
 
-### Option 2: USB Webcam Mode
+# Or explicitly specify
+python app.py --source 0
+```
 
-#### Android
-1. Install **DroidCam** app
-2. Connect phone via USB
-3. Enable USB debugging
-4. Phone appears as webcam device
-5. Find device index: `ls /dev/video*`
-6. Use index in StreetSage: `python app.py --source 1`
+**Pros**: No setup, works immediately
+**Cons**: Limited mobility compared to phone on lanyard/chest mount
 
-#### iOS
-1. Install **EpocCam** or similar
-2. Connect via USB or Wi-Fi
-3. Phone appears as webcam
-4. Use appropriate device index
+---
+
+### Option 2: Phone Camera - USB Mode (Recommended)
+
+Easiest and most reliable phone camera option:
+
+#### DroidCam (Android & iOS)
+1. **Install DroidCam**:
+   - Android: [Google Play Store](https://play.google.com/store/apps/details?id=com.dev47apps.droidcam)
+   - iOS: [App Store](https://apps.apple.com/app/droidcam-webcam-obs-camera/id1510258102)
+2. **Install DroidCam Client** on your computer:
+   - Download from [dev47apps.com](https://www.dev47apps.com/)
+3. **Connect via USB**:
+   - Plug in phone via USB cable
+   - Enable "USB Debugging" on Android (Settings → Developer Options)
+   - Launch DroidCam on both phone and computer
+   - Click "Connect" in DroidCam Client
+4. **Find video device**:
+   ```bash
+   ls /dev/video*  # Linux
+   # Or check DroidCam Client for device number
+   ```
+5. **Use in StreetSage**:
+   ```bash
+   python app.py --source 1  # Or whichever index DroidCam uses
+   ```
+
+**Pros**: Stable connection, works on both Android/iOS, no Wi-Fi needed
+**Cons**: Requires USB cable, desktop client installation
+
+---
+
+### Option 3: Phone Camera - Wi-Fi Streaming
+
+If you prefer wireless:
+
+#### Android - IP Webcam (Free)
+1. Install **IP Webcam** from [Play Store](https://play.google.com/store/apps/details?id=com.pas.webcam)
+2. Open app → **Start Server**
+3. Note the IP address shown (e.g., `192.168.1.100:8080`)
+4. Use in StreetSage:
+   ```bash
+   # RTSP (recommended)
+   python app.py --source rtsp://192.168.1.100:8080/h264_ulaw.sdp
+
+   # Or MJPEG
+   python app.py --source http://192.168.1.100:8080/video
+   ```
+
+**Pros**: No cable, free, feature-rich
+**Cons**: Requires same Wi-Fi network, can lag
+
+#### iOS - EpocCam (Freemium)
+1. Install **EpocCam** from [App Store](https://apps.apple.com/app/epoccam-webcam-for-computer/id435355256)
+2. Install **EpocCam Drivers** on your computer:
+   - Download from [kinoni.com](https://www.kinoni.com/)
+3. Connect via Wi-Fi:
+   - Ensure phone and computer on same network
+   - Launch EpocCam on phone
+   - Phone auto-appears as webcam
+4. Find device index:
+   ```bash
+   ls /dev/video*  # Linux/macOS
+   # Or check System Settings → Camera
+   ```
+5. Use in StreetSage:
+   ```bash
+   python app.py --source 2  # Or whichever index EpocCam uses
+   ```
+
+**Pros**: Easy setup, works wirelessly
+**Cons**: Free version has watermark, requires driver installation
 
 ---
 

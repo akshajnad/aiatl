@@ -131,12 +131,17 @@ def test_camera_sources():
         "http://192.168.1.100:8080/video"
     ]
 
-    print("\n\nExample URLs to try with your phone:")
-    print("  Android: Install 'IP Webcam' app")
-    print("    - RTSP: rtsp://<phone-ip>:8080/h264_ulaw.sdp")
-    print("    - MJPEG: http://<phone-ip>:8080/video")
-    print("  iOS: Install 'Iriun Webcam' or similar")
-    print("    - Follow app instructions to get URL")
+    print("\n\nExample phone camera options:")
+    print("  Easiest: Use DroidCam (USB mode)")
+    print("    - Works on both Android & iOS")
+    print("    - Install app + desktop client from dev47apps.com")
+    print("    - Connect via USB, appears as webcam device")
+    print("\n  Wi-Fi Streaming:")
+    print("    Android: Install 'IP Webcam' app")
+    print("      - RTSP: rtsp://<phone-ip>:8080/h264_ulaw.sdp")
+    print("      - MJPEG: http://<phone-ip>:8080/video")
+    print("    iOS: Install 'EpocCam' app")
+    print("      - Install drivers, phone appears as webcam")
 
 
 if __name__ == "__main__":
